@@ -1,8 +1,7 @@
 mod tokenizer;
 
-use std::io::Write;
-
 use regex::Regex;
+use std::io::Write;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -20,10 +19,9 @@ fn main() {
         None => {
             println!("{}", &args[1]);
             panic!("not a C source file");
-        },
+        }
     }
-    let code_regex =
-        Regex::new(r"\s*int\s*main\s*\(void\)\s*\{\s*return\s+(\d+)\s*;\s*\}\s*").unwrap();
+    let code_regex = Regex::new(r"\s*int\s*main\s*\(\)\s*\{\s*return\s+(\d+)\s*;\s*\}\s*").unwrap();
 
     match code_regex.captures(&content) {
         Some(literal) => {
@@ -33,7 +31,8 @@ fn main() {
                         r#"    .globl main
 main:
     movl ${}, %eax
-    ret"#,
+    ret
+"#,
                         &literal[1]
                     )
                     .as_bytes(),
