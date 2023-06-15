@@ -3,6 +3,24 @@ mod tokenizer;
 use regex::Regex;
 use std::io::Write;
 
+fn compile(input: String) -> String {
+    let code_regex = Regex::new(r"\s*int\s*main\s*\(\)\s*\{\s*return\s+(\d+)\s*;\s*\}\s*").unwrap();
+
+    match code_regex.captures(&input) {
+        Some(literal) => {
+            format!(
+                r#"    .globl main
+main:
+    movl ${}, %eax
+    ret
+"#,
+                &literal[1]
+            )
+        }
+        None => panic!("easy, tiger!"),
+    }
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     let content: String;
@@ -21,24 +39,26 @@ fn main() {
             panic!("not a C source file");
         }
     }
-    let code_regex = Regex::new(r"\s*int\s*main\s*\(\)\s*\{\s*return\s+(\d+)\s*;\s*\}\s*").unwrap();
 
-    match code_regex.captures(&content) {
-        Some(literal) => {
-            destination_file
-                .write_all(
-                    format!(
-                        r#"    .globl main
+    destination_file
+        .write_all(compile(content).as_bytes())
+        .unwrap();
+}
+
+
+#[test]
+fn level1() {
+    let input: String = r#"int main() {
+    return 2;
+}"#
+    .into();
+
+    let intended: String = r#"    .globl main
 main:
-    movl ${}, %eax
+    movl $2, %eax
     ret
-"#,
-                        &literal[1]
-                    )
-                    .as_bytes(),
-                )
-                .unwrap();
-        }
-        None => println!("easy, tiger!"),
-    };
+"#
+    .into();
+
+    assert_eq!(intended, compile(input));
 }
