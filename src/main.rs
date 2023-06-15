@@ -3,25 +3,23 @@ mod tokenizer;
 use regex::Regex;
 use std::io::Write;
 
-fn compile(input: String) -> String {
+fn compile(input: String) -> Result<String, String> {
     let code_regex = Regex::new(r"\s*int\s*main\s*\(\)\s*\{\s*return\s+(\d+)\s*;\s*\}\s*").unwrap();
 
     match code_regex.captures(&input) {
-        Some(literal) => {
-            format!(
-                r#"    .globl main
+        Some(literal) => Ok(format!(
+            r#"    .globl main
 main:
     movl ${}, %eax
     ret
 "#,
-                &literal[1]
-            )
-        }
-        None => panic!("easy, tiger!"),
+            &literal[1]
+        )),
+        None => Err("easy, tiger!".into()),
     }
 }
 
-fn main() {
+fn main() -> Result<(), String> {
     let args: Vec<String> = std::env::args().collect();
     let content: String;
 
@@ -41,10 +39,11 @@ fn main() {
     }
 
     destination_file
-        .write_all(compile(content).as_bytes())
+        .write_all(compile(content)?.as_bytes())
         .unwrap();
-}
 
+    Ok(())
+}
 
 #[test]
 fn level1() {
@@ -60,5 +59,5 @@ main:
 "#
     .into();
 
-    assert_eq!(intended, compile(input));
+    assert_eq!(intended, compile(input).unwrap());
 }
