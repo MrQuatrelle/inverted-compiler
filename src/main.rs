@@ -46,7 +46,7 @@ fn main() -> Result<(), String> {
 }
 
 #[test]
-fn level1() {
+fn level1_pure_regex() {
     let input: String = r#"int main() {
     return 2;
 }"#
@@ -60,4 +60,24 @@ main:
     .into();
 
     assert_eq!(intended, compile(input).unwrap());
+}
+
+#[test]
+fn level1_tokens() {
+    let input = r#"int main() {
+    return 2;
+}"#;
+
+    let received = tokenizer::tokenize(&input).unwrap();
+
+    let intended = vec![tokenizer::TokenKind::Identifier("int".into()),
+    tokenizer::TokenKind::Identifier("main".into()),
+    tokenizer::TokenKind::LCurly,
+    tokenizer::TokenKind::Identifier("return".into()),
+    tokenizer::TokenKind::Integer(2),
+    tokenizer::TokenKind::SemiColon,
+    tokenizer::TokenKind::RCurly,
+    ];
+
+    assert_eq!(intended, received);
 }
