@@ -70,13 +70,16 @@ fn level1_tokens() {
 
     let received = tokenizer::tokenize(&input).unwrap();
 
-    let intended = vec![tokenizer::TokenKind::Identifier("int".into()),
-    tokenizer::TokenKind::Identifier("main".into()),
-    tokenizer::TokenKind::LCurly,
-    tokenizer::TokenKind::Identifier("return".into()),
-    tokenizer::TokenKind::Integer(2),
-    tokenizer::TokenKind::SemiColon,
-    tokenizer::TokenKind::RCurly,
+    let intended = vec![
+        tokenizer::TokenKind::Identifier("int".into()),
+        tokenizer::TokenKind::Identifier("main".into()),
+        tokenizer::TokenKind::LParenthesis,
+        tokenizer::TokenKind::RParenthesis,
+        tokenizer::TokenKind::LCurly,
+        tokenizer::TokenKind::Identifier("return".into()),
+        tokenizer::TokenKind::Integer(2),
+        tokenizer::TokenKind::SemiColon,
+        tokenizer::TokenKind::RCurly,
     ];
 
     assert_eq!(intended, received);

@@ -35,8 +35,10 @@ fn tokenize_single_integer(slice: &str) -> Result<(TokenKind, usize), String> {
     loop {
         match iter.next() {
             Some(c) => {
-                if c.is_numeric() {
+                if c.is_digit(10) {
                     offset += 1;
+                } else {
+                    break;
                 }
             }
             None => {
@@ -46,13 +48,40 @@ fn tokenize_single_integer(slice: &str) -> Result<(TokenKind, usize), String> {
     }
 
     if offset == 0 {
-        Err("Not an integer".into())
+        Err(format!("Not an integer (2): '{}'", slice))
     } else {
         let buffer = &slice[..offset];
         match buffer.parse::<usize>() {
             Ok(i) => Ok((TokenKind::Integer(i), offset)),
-            Err(_) => Err("Not an integer".into()),
+            Err(_) => Err(format!("Not an integer (3): '{}'", slice)),
         }
+    }
+}
+
+fn tokenize_single_identifier(slice: &str) -> Result<(TokenKind, usize), String> {
+    let mut offset = 0_usize;
+
+    {
+        if let Some(c) = slice.chars().next() {
+            if c.is_digit(10) {
+                return Err("unexpected digit in front of given slice".into());
+            }
+        }
+    }
+
+    for c in slice.chars() {
+        if !c.is_alphanumeric() {
+            break;
+        }
+
+        offset += 1;
+    }
+
+    if offset == 0 {
+        Err("Not an identifier".into())
+    } else {
+        let buffer = &slice[..offset];
+        Ok((TokenKind::Identifier(buffer.into()), offset))
     }
 }
 
@@ -66,27 +95,48 @@ impl<'a> Tokenizer<'a> {
         Self { remaining_content }
     }
 
-    fn next_token(&mut self) -> Result<Option<TokenKind>, String> {
-        if self.remaining_content.is_empty() {
-            Ok(None)
-        } else {
-            let next_char = match self.remaining_content.chars().next() {
-                Some(c) => c,
-                None => return Err("unexpected end of content".into()),
-            };
-
-            let (ret, offset) = match next_char {
-                ';' => (TokenKind::SemiColon, 1),
-                '(' => (TokenKind::LParenthesis, 1),
-                ')' => (TokenKind::RParenthesis, 1),
-                '{' => (TokenKind::LCurly, 1),
-                '}' => (TokenKind::RCurly, 1),
-                '0'..='9' => tokenize_single_integer(self.remaining_content)?,
-                _ => return Err("Unsupported pattern".into()),
-            };
-            self.remaining_content = &self.remaining_content[offset..];
-            Ok(Some(ret))
+    fn _skip_whitespaces(&mut self) {
+        let mut offset = 0_usize;
+        for c in self.remaining_content.chars() {
+            if c.is_whitespace() {
+                offset += 1;
+            } else {
+                break;
+            }
         }
+
+        self.remaining_content = &self.remaining_content[offset..];
+    }
+
+    fn next_token(&mut self) -> Result<Option<TokenKind>, String> {
+        self._skip_whitespaces();
+
+        if self.remaining_content.is_empty() {
+            return Ok(None);
+        }
+
+        let next_char = match self.remaining_content.chars().next() {
+            Some(c) => c,
+            None => return Err("unexpected end of content".into()),
+        };
+
+        let (ret, offset) = match next_char {
+            ';' => (TokenKind::SemiColon, 1),
+            '(' => (TokenKind::LParenthesis, 1),
+            ')' => (TokenKind::RParenthesis, 1),
+            '{' => (TokenKind::LCurly, 1),
+            '}' => (TokenKind::RCurly, 1),
+            '0'..='9' => tokenize_single_integer(self.remaining_content)?,
+            'A'..='Z' | 'a'..='z' | '_' => tokenize_single_identifier(self.remaining_content)?,
+            _ => {
+                return Err(format!(
+                    "Unsupported pattern at: {}",
+                    &self.remaining_content
+                ))
+            }
+        };
+        self.remaining_content = &self.remaining_content[offset..];
+        Ok(Some(ret))
     }
 }
 
@@ -108,10 +158,19 @@ pub fn tokenize(content: &str) -> Result<Vec<TokenKind>, String> {
 fn parse_symbols_test() {
     let mut tokenizer = Tokenizer::new(";(){}1234");
     assert_eq!(Some(TokenKind::SemiColon), tokenizer.next_token().unwrap());
-    assert_eq!(Some(TokenKind::LParenthesis), tokenizer.next_token().unwrap());
-    assert_eq!(Some(TokenKind::RParenthesis), tokenizer.next_token().unwrap());
+    assert_eq!(
+        Some(TokenKind::LParenthesis),
+        tokenizer.next_token().unwrap()
+    );
+    assert_eq!(
+        Some(TokenKind::RParenthesis),
+        tokenizer.next_token().unwrap()
+    );
     assert_eq!(Some(TokenKind::LCurly), tokenizer.next_token().unwrap());
     assert_eq!(Some(TokenKind::RCurly), tokenizer.next_token().unwrap());
-    assert_eq!(Some(TokenKind::Integer(1234)), tokenizer.next_token().unwrap());
+    assert_eq!(
+        Some(TokenKind::Integer(1234)),
+        tokenizer.next_token().unwrap()
+    );
     assert_eq!(None, tokenizer.next_token().unwrap());
 }
