@@ -1,4 +1,5 @@
 mod tokenizer;
+mod parser;
 
 use regex::Regex;
 use std::io::Write;
