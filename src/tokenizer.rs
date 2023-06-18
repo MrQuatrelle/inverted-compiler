@@ -1,3 +1,8 @@
+#[derive(Debug, PartialEq)]
+pub enum VarType {
+    Int,
+}
+
 /// Kinds of tokens of the inverted-C lang
 #[derive(Debug, PartialEq)]
 pub enum TokenKind {
@@ -8,6 +13,8 @@ pub enum TokenKind {
     RCurly,
     Identifier(String),
     Integer(usize),
+    Type(VarType),
+    Return,
 }
 
 impl From<String> for TokenKind {
@@ -48,17 +55,17 @@ fn tokenize_single_integer(slice: &str) -> Result<(TokenKind, usize), String> {
     }
 
     if offset == 0 {
-        Err(format!("Not an integer (2): '{}'", slice))
+        Err(format!("Not an integer: '{}'", slice))
     } else {
         let buffer = &slice[..offset];
         match buffer.parse::<usize>() {
             Ok(i) => Ok((TokenKind::Integer(i), offset)),
-            Err(_) => Err(format!("Not an integer (3): '{}'", slice)),
+            Err(_) => Err(format!("Not an integer: '{}'", slice)),
         }
     }
 }
 
-fn tokenize_single_identifier(slice: &str) -> Result<(TokenKind, usize), String> {
+fn tokenize_string(slice: &str) -> Result<(TokenKind, usize), String> {
     let mut offset = 0_usize;
 
     {
@@ -81,7 +88,13 @@ fn tokenize_single_identifier(slice: &str) -> Result<(TokenKind, usize), String>
         Err("Not an identifier".into())
     } else {
         let buffer = &slice[..offset];
-        Ok((TokenKind::Identifier(buffer.into()), offset))
+        if buffer == "int" {
+            Ok((TokenKind::Type(VarType::Int), offset))
+        } else if buffer == "return" {
+            Ok((TokenKind::Return, offset))
+        } else {
+            Ok((TokenKind::Identifier(buffer.into()), offset))
+        }
     }
 }
 
@@ -127,7 +140,7 @@ impl<'a> Tokenizer<'a> {
             '{' => (TokenKind::LCurly, 1),
             '}' => (TokenKind::RCurly, 1),
             '0'..='9' => tokenize_single_integer(self.remaining_content)?,
-            'A'..='Z' | 'a'..='z' | '_' => tokenize_single_identifier(self.remaining_content)?,
+            'A'..='Z' | 'a'..='z' | '_' => tokenize_string(self.remaining_content)?,
             _ => {
                 return Err(format!(
                     "Unsupported pattern at: {}",

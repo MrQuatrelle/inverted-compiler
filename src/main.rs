@@ -33,8 +33,7 @@ fn main() -> Result<(), String> {
             destination_file = std::fs::File::create(filename).unwrap();
         }
         None => {
-            println!("{}", &args[1]);
-            panic!("not a C source file");
+            panic!("{}: not a C source file", &args[1]);
         }
     }
 
@@ -71,12 +70,12 @@ fn level1_tokens() {
     let received = tokenizer::tokenize(&input).unwrap();
 
     let intended = vec![
-        tokenizer::TokenKind::Identifier("int".into()),
+        tokenizer::TokenKind::Type(tokenizer::VarType::Int),
         tokenizer::TokenKind::Identifier("main".into()),
         tokenizer::TokenKind::LParenthesis,
         tokenizer::TokenKind::RParenthesis,
         tokenizer::TokenKind::LCurly,
-        tokenizer::TokenKind::Identifier("return".into()),
+        tokenizer::TokenKind::Return,
         tokenizer::TokenKind::Integer(2),
         tokenizer::TokenKind::SemiColon,
         tokenizer::TokenKind::RCurly,
