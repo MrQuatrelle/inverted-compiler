@@ -1,3 +1,8 @@
+use std::cell::RefCell;
+use std::ops::Deref;
+use std::ops::DerefMut;
+use std::rc::Rc;
+
 use crate::tokenizer::TokenKind;
 use crate::tokenizer::VarType;
 
@@ -5,11 +10,12 @@ enum ParserNodeType {
     Program,
     Function(VarType),
     Return(VarType),
+    LiteralInt(usize),
 }
 
 struct ParserNode {
     node_type: ParserNodeType,
-    next: Option<Box<ParserNode>>,
+    next: Option<Rc<RefCell<ParserNode>>>,
 }
 
 struct Parser {
@@ -23,13 +29,13 @@ impl Parser {
         }
     }
 
-    fn build_ast(&self) -> Result<(), String> {
+    fn build_ast(&self) -> Result<Rc<RefCell<ParserNode>>, String> {
         let mut iter = self.remaining_tokens.iter().peekable();
-        let mut head = ParserNode {
+        let head = Rc::new(RefCell::new(ParserNode {
             node_type: ParserNodeType::Program,
             next: None,
-        };
-        let mut tmp: &ParserNode;
+        }));
+        let mut tmp = head.clone();
         match iter.next() {
             Some(TokenKind::Type(VarType::Int)) => {}
             _ => return Err("only lvl1 forms accepted".into()),
@@ -44,8 +50,9 @@ impl Parser {
                     node_type: ParserNodeType::Function(VarType::Int),
                     next: None,
                 };
-                tmp = &buffer;
-                head.next = Some(Box::new(buffer));
+                let buffer2 = Some(Rc::new(RefCell::new(buffer)));
+                tmp.borrow_mut().next = buffer2.clone();
+                tmp = buffer2.clone().unwrap();
             }
             _ => return Err("only lvl1 forms accepted".into()),
         }
@@ -68,22 +75,27 @@ impl Parser {
         match iter.next() {
             Some(TokenKind::Return) => {
                 let next = iter.next().unwrap();
-                let buffer = ParserNode {
-                    node_type: ParserNodeType::Return(next)
-                }
-            },
+                if let TokenKind::Integer(i) = next {
+                    let buffer = ParserNode {
+                        node_type: ParserNodeType::Return(VarType::Int),
+                        next: Some(Rc::new(RefCell::new(ParserNode {
+                            node_type: ParserNodeType::LiteralInt(*i),
+                            next: None,
+                        }))),
+                    };
+                    let buffer2 = Some(Rc::new(RefCell::new(buffer)));
+                    tmp.borrow_mut().next = buffer2.clone();
+                    tmp = buffer2.clone().unwrap();
+                };
+            }
             _ => return Err("only main with a return statement supported yet".into()),
         }
 
-
-
-
-
-
         match iter.next() {
             Some(TokenKind::RCurly) => {}
-            _ => return Err("function declaration must be followed by argument tuple".into()),
+            _ => return Err("missing closing curly brace".into()),
         }
-        Ok(())
+
+        Ok(head.clone())
     }
 }
