@@ -1,6 +1,4 @@
 use std::cell::RefCell;
-use std::ops::Deref;
-use std::ops::DerefMut;
 use std::rc::Rc;
 
 use crate::tokenizer::TokenKind;
@@ -13,7 +11,7 @@ enum ParserNodeType {
     LiteralInt(usize),
 }
 
-struct ParserNode {
+pub struct ParserNode {
     node_type: ParserNodeType,
     next: Option<Rc<RefCell<ParserNode>>>,
 }
@@ -98,4 +96,9 @@ impl Parser {
 
         Ok(head.clone())
     }
+}
+
+pub fn parse(tokens: Vec<TokenKind>) -> Result<Rc<RefCell<ParserNode>>, String> {
+    let parser = Parser::new(tokens);
+    todo!()
 }

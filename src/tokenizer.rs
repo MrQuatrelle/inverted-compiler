@@ -17,6 +17,7 @@ pub enum TokenKind {
     Return,
 }
 
+/// Implementations of `From` trait for `TokenKind`
 impl From<String> for TokenKind {
     fn from(value: String) -> Self {
         TokenKind::Identifier(value)

@@ -1,23 +1,14 @@
-mod tokenizer;
 mod parser;
+mod tokenizer;
 
 use regex::Regex;
 use std::io::Write;
 
 fn compile(input: String) -> Result<String, String> {
-    let code_regex = Regex::new(r"\s*int\s*main\s*\(\)\s*\{\s*return\s+(\d+)\s*;\s*\}\s*").unwrap();
-
-    match code_regex.captures(&input) {
-        Some(literal) => Ok(format!(
-            r#"    .globl main
-main:
-    movl ${}, %eax
-    ret
-"#,
-            &literal[1]
-        )),
-        None => Err("easy, tiger!".into()),
-    }
+    let tokens = tokenizer::tokenize(&input)?;
+    println!("{:?}", tokens);
+    let _ast = parser::parse(tokens)?;
+    todo!()
 }
 
 fn main() -> Result<(), String> {
@@ -43,23 +34,6 @@ fn main() -> Result<(), String> {
         .unwrap();
 
     Ok(())
-}
-
-#[test]
-fn level1_pure_regex() {
-    let input: String = r#"int main() {
-    return 2;
-}"#
-    .into();
-
-    let intended: String = r#"    .globl main
-main:
-    movl $2, %eax
-    ret
-"#
-    .into();
-
-    assert_eq!(intended, compile(input).unwrap());
 }
 
 #[test]
