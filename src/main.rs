@@ -34,25 +34,3 @@ fn main() -> Result<(), String> {
     Ok(())
 }
 
-#[test]
-fn level1_tokens() {
-    let input = r#"int main() {
-    return 2;
-}"#;
-
-    let received = tokenizer::tokenize(&input).unwrap();
-
-    let intended = vec![
-        tokenizer::TokenKind::Type(tokenizer::VarType::Int),
-        tokenizer::TokenKind::Identifier("main".into()),
-        tokenizer::TokenKind::LParenthesis,
-        tokenizer::TokenKind::RParenthesis,
-        tokenizer::TokenKind::LCurly,
-        tokenizer::TokenKind::Return,
-        tokenizer::TokenKind::Integer(2),
-        tokenizer::TokenKind::SemiColon,
-        tokenizer::TokenKind::RCurly,
-    ];
-
-    assert_eq!(intended, received);
-}

@@ -188,3 +188,26 @@ fn parse_symbols_test() {
     );
     assert_eq!(None, tokenizer.next_token().unwrap());
 }
+
+#[test]
+fn level1_tokens() {
+    let input = r#"int main() {
+    return 2;
+}"#;
+
+    let received = tokenize(&input).unwrap();
+
+    let intended = vec![
+        TokenKind::Type(VarType::Int),
+        TokenKind::Identifier("main".into()),
+        TokenKind::LParenthesis,
+        TokenKind::RParenthesis,
+        TokenKind::LCurly,
+        TokenKind::Return,
+        TokenKind::Integer(2),
+        TokenKind::SemiColon,
+        TokenKind::RCurly,
+    ];
+
+    assert_eq!(intended, received);
+}
