@@ -1,5 +1,4 @@
-use crate::tokenizer::tokenize;
-use crate::tokenizer::TokenKind;
+use crate::tokenizer::{tokenize, TokenKind};
 
 pub enum ASTNodeKind {
     Integer(usize),
