@@ -1,4 +1,4 @@
-use crate::tokenizer::{tokenize, TokenKind};
+use crate::tokenizer;
 
 pub enum ASTNodeKind {
     Integer(usize),
@@ -6,16 +6,16 @@ pub enum ASTNodeKind {
 
 struct Parser {
     // NOTE: maybe this becomes a slice like the tokenizer
-    tokens: Vec<TokenKind>,
+    tokens: Vec<tokenizer::TokenKind>,
 }
 
 impl Parser {
-    fn from_tokens(tokens: Vec<TokenKind>) -> Result<Parser, String> {
+    fn from_tokens(tokens: Vec<tokenizer::TokenKind>) -> Result<Parser, String> {
         Ok(Parser { tokens })
     }
 }
 
 pub fn parse_tokens(text: String) -> Result<ASTNodeKind, String> {
-    let parser = Parser::from_tokens(tokenize(&text)?);
+    let parser = Parser::from_tokens(tokenizer::tokenize(&text)?);
     todo!()
 }
