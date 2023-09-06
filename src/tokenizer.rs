@@ -36,7 +36,7 @@ impl From<usize> for TokenKind {
     }
 }
 
-fn tokenize_single_integer(slice: &str) -> Result<(TokenKind, usize), String> {
+fn tokenize_integer(slice: &str) -> Result<(TokenKind, usize), String> {
     let mut offset = 0_usize;
     let mut iter = slice.chars();
 
@@ -140,7 +140,7 @@ impl<'a> Tokenizer<'a> {
             ')' => (TokenKind::RParenthesis, 1),
             '{' => (TokenKind::LCurly, 1),
             '}' => (TokenKind::RCurly, 1),
-            '0'..='9' => tokenize_single_integer(self.remaining_content)?,
+            '0'..='9' => tokenize_integer(self.remaining_content)?,
             'A'..='Z' | 'a'..='z' | '_' => tokenize_string(self.remaining_content)?,
             _ => {
                 return Err(format!(
