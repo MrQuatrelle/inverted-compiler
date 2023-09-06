@@ -5,7 +5,7 @@ use regex::Regex;
 use std::io::Write;
 
 fn compile(input: String) -> Result<String, String> {
-    let _ast = parser::parse_tokens(input)?;
+    let _ast = parser::parse(input)?;
     todo!()
 }
 
