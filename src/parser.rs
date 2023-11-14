@@ -4,11 +4,11 @@ pub enum ASTNodeKind {}
 
 struct Parser<'a> {
     // NOTE: maybe this becomes a slice like the tokenizer
-    tokens: &'a Vec<tokenizer::TokenKind>,
+    tokens: &'a [TokenKind],
 }
 
 impl<'a> Parser<'a> {
-    fn from_tokens(tokens: &Vec<tokenizer::TokenKind>) -> Result<Parser, String> {
+    fn from_tokens(tokens: &[TokenKind]) -> Result<Parser, String> {
         Ok(Parser { tokens })
     }
 
@@ -18,6 +18,7 @@ impl<'a> Parser<'a> {
 }
 
 pub fn parse(text: String) -> Result<ASTNodeKind, String> {
-    let parser = Parser::from_tokens(&tokenizer::tokenize(&text)?);
+    let tokens = tokenizer::tokenize(text)?;
+    let mut parser = Parser::from_tokens(tokens.as_slice())?;
     todo!()
 }
