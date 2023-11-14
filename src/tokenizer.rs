@@ -38,30 +38,24 @@ impl From<usize> for TokenKind {
 
 fn tokenize_integer(slice: &str) -> Result<(TokenKind, usize), String> {
     let mut offset = 0_usize;
-    let mut iter = slice.chars();
 
-    loop {
-        match iter.next() {
-            Some(c) => {
-                if c.is_digit(10) {
-                    offset += 1;
-                } else {
-                    break;
-                }
-            }
-            None => {
-                break;
-            }
-        };
+    for c in slice.chars() {
+        if c.is_digit(10) {
+            offset += 1;
+        } else {
+            break;
+        }
     }
 
     if offset == 0 {
         Err(format!("Not an integer: '{}'", slice))
     } else {
         let buffer = &slice[..offset];
-        match buffer.parse::<usize>() {
-            Ok(i) => Ok((TokenKind::Integer(i), offset)),
-            Err(_) => Err(format!("Not an integer: '{}'", slice)),
+
+        if let Ok(i) = buffer.parse::<usize>() {
+            Ok((TokenKind::Integer(i), offset))
+        } else {
+            Err(format!("Not an integer: '{}'", slice))
         }
     }
 }
@@ -69,11 +63,9 @@ fn tokenize_integer(slice: &str) -> Result<(TokenKind, usize), String> {
 fn tokenize_string(slice: &str) -> Result<(TokenKind, usize), String> {
     let mut offset = 0_usize;
 
-    {
-        if let Some(c) = slice.chars().next() {
-            if c.is_digit(10) {
-                return Err("unexpected digit in front of given slice".into());
-            }
+    if let Some(c) = slice.chars().next() {
+        if c.is_digit(10) {
+            return Err("unexpected digit in front of given slice".into());
         }
     }
 
@@ -154,15 +146,12 @@ impl<'a> Tokenizer<'a> {
     }
 }
 
-pub fn tokenize(content: &str) -> Result<Vec<TokenKind>, String> {
-    let mut tokenizer = Tokenizer::new(content);
+pub fn tokenize(content: String) -> Result<Vec<TokenKind>, String> {
+    let mut tokenizer = Tokenizer::new(&content);
     let mut tokens: Vec<TokenKind> = Vec::new();
 
-    loop {
-        match tokenizer.next_token()? {
-            Some(t) => tokens.push(t),
-            None => break,
-        };
+    while let Some(t) = tokenizer.next_token()? {
+        tokens.push(t)
     }
 
     Ok(tokens)
@@ -193,9 +182,10 @@ fn parse_symbols_test() {
 fn level1_tokens() {
     let input = r#"int main() {
     return 2;
-}"#;
+}"#
+    .into();
 
-    let received = tokenize(&input).unwrap();
+    let received = tokenize(input).unwrap();
 
     let intended = vec![
         TokenKind::Type(VarType::Int),
