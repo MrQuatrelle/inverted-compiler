@@ -1,12 +1,12 @@
-mod parser;
-mod tokenizer;
-
+pub mod ast;
 use regex::Regex;
 use std::io::Write;
 
 fn compile(input: String) -> Result<String, String> {
-    let _ast = parser::parse(input)?;
-    todo!()
+    let ast = ast::parser::parse(input)?;
+    ast.visualize();
+
+    Ok("".into())
 }
 
 fn main() -> Result<(), String> {

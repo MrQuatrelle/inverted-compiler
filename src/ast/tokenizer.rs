@@ -12,7 +12,7 @@ pub enum TokenKind {
     LCurly,
     RCurly,
     Identifier(String),
-    Integer(usize),
+    Integer(i64),
     Type(VarType),
     Return,
 }
@@ -26,12 +26,12 @@ impl From<String> for TokenKind {
 
 impl<'a> From<&'a str> for TokenKind {
     fn from(value: &'a str) -> Self {
-        TokenKind::Identifier(value.to_string())
+        TokenKind::Identifier(value.into())
     }
 }
 
-impl From<usize> for TokenKind {
-    fn from(value: usize) -> Self {
+impl From<i64> for TokenKind {
+    fn from(value: i64) -> Self {
         TokenKind::Integer(value)
     }
 }
@@ -52,7 +52,7 @@ fn tokenize_integer(slice: &str) -> Result<(TokenKind, usize), String> {
     } else {
         let buffer = &slice[..offset];
 
-        if let Ok(i) = buffer.parse::<usize>() {
+        if let Ok(i) = buffer.parse::<i64>() {
             Ok((TokenKind::Integer(i), offset))
         } else {
             Err(format!("Not an integer: '{}'", slice))
@@ -158,7 +158,7 @@ pub fn tokenize(content: String) -> Result<Vec<TokenKind>, String> {
 }
 
 #[test]
-fn parse_symbols_test() {
+fn tokenizer_test1() {
     let mut tokenizer = Tokenizer::new(";(){}1234");
     assert_eq!(Some(TokenKind::SemiColon), tokenizer.next_token().unwrap());
     assert_eq!(
@@ -179,7 +179,7 @@ fn parse_symbols_test() {
 }
 
 #[test]
-fn level1_tokens() {
+fn tokenizer_test2() {
     let input = r#"int main() {
     return 2;
 }"#
