@@ -1,25 +1,86 @@
+use core::panic;
+use std::i64;
+
+use self::tokenizer::TokenKind;
+
 pub mod parser;
 pub mod tokenizer;
 
-#[derive(Debug)]
 pub(crate) enum ASTExpressionKind {
     IntegerLiteral(i64),
+    Binary(ASTBinaryExpression),
 }
 
-#[derive(Debug)]
-pub(crate) struct ASTExpression {
-    kind: ASTExpressionKind,
+pub(crate) enum BinaryOperatorKind {
+    Plus,
+    Minus,
+    Mult,
+    Div,
 }
 
-impl From<i64> for ASTExpression {
-    fn from(value: i64) -> Self {
-        Self {
-            kind: ASTExpressionKind::IntegerLiteral(value),
+impl std::fmt::Display for BinaryOperatorKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BinaryOperatorKind::Plus => write!(f, "+"),
+            BinaryOperatorKind::Minus => write!(f, "-"),
+            BinaryOperatorKind::Mult => write!(f, "*"),
+            BinaryOperatorKind::Div => write!(f, "/"),
         }
     }
 }
 
-#[derive(Debug)]
+pub(crate) struct ASTBinaryExpression {
+    operator: BinaryOperatorKind,
+    left: Box<ASTExpression>,
+    right: Box<ASTExpression>,
+}
+
+impl ASTBinaryExpression {
+    fn new(operator: BinaryOperatorKind, left: ASTExpression, right: ASTExpression) -> Self {
+        Self {
+            operator,
+            left: left.into(),
+            right: right.into(),
+        }
+    }
+}
+
+pub(crate) struct ASTExpression {
+    kind: ASTExpressionKind,
+}
+
+impl TryFrom<&tokenizer::TokenKind> for ASTExpression {
+    type Error = ();
+
+    fn try_from(token: &tokenizer::TokenKind) -> Result<Self, Self::Error> {
+        match token {
+            TokenKind::Integer(i) => Ok(Self {
+                kind: ASTExpressionKind::IntegerLiteral(*i),
+            }),
+            _ => Err(()),
+        }
+    }
+}
+
+impl From<i64> for ASTExpression {
+    fn from(i: i64) -> Self {
+        Self {
+            kind: ASTExpressionKind::IntegerLiteral(i),
+        }
+    }
+}
+
+impl TryFrom<ASTNode> for ASTExpression {
+    type Error = ();
+
+    fn try_from(value: ASTNode) -> Result<Self, Self::Error> {
+        match value.kind {
+            ASTNodeKind::Expression(exp) => Ok(exp),
+            _ => Err(()),
+        }
+    }
+}
+
 pub(crate) enum ASTNodeKind {
     Expression(ASTExpression),
 }
@@ -30,7 +91,6 @@ impl From<ASTExpression> for ASTNodeKind {
     }
 }
 
-#[derive(Debug)]
 pub struct ASTNode {
     kind: ASTNodeKind,
 }
@@ -43,27 +103,12 @@ impl From<ASTNodeKind> for ASTNode {
 
 impl From<ASTExpression> for ASTNode {
     fn from(value: ASTExpression) -> Self {
-        Self { kind: value.into() }
+        Self {
+            kind: ASTNodeKind::Expression(value),
+        }
     }
 }
 
-impl std::fmt::Display for ASTNode {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match &self.kind {
-            ASTNodeKind::Expression(expr) => {
-                let _ = write!(f, "[ASTExpression] :: ");
-                match expr.kind {
-                    ASTExpressionKind::IntegerLiteral(i) => {
-                        let _ = write!(f, "Integer literal :: value = {i}");
-                    }
-                }
-            }
-        };
-        Ok(())
-    }
-}
-
-#[derive(Debug)]
 pub struct AST {
     nodes: Vec<ASTNode>,
 }
@@ -73,17 +118,71 @@ impl AST {
         Self { nodes: Vec::new() }
     }
 
+    fn push(&mut self, value: ASTNode) {
+        self.nodes.push(value)
+    }
+
+    fn pop_last(&mut self) -> Option<ASTNode> {
+        self.nodes.pop()
+    }
+
     pub fn visualize(&self) {
-        println!("{}", self);
+        let mut visualizer = ASTVisualizer::new();
+
+        self.nodes.iter().for_each(|node| {
+            visualizer.visit_node(&node);
+        })
     }
 }
 
-impl std::fmt::Display for AST {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.nodes.iter().for_each(|node| {
-            let _ = writeln!(f, "{node}");
-        });
+trait ASTVisitor {
+    fn visit_node(&mut self, node: &ASTNode) {
+        match &node.kind {
+            ASTNodeKind::Expression(e) => self.visit_expression(&e),
 
-        Ok(())
+            // NOTE: remove on final build
+            #[allow(unreachable_patterns)]
+            _ => {
+                panic!("[ast::ASTVisitor]: visit_node() not implemented for given ast::ASTNodeKind")
+            }
+        }
+    }
+
+    fn visit_expression(&mut self, exp: &ASTExpression);
+}
+
+struct ASTVisualizer {
+    indent: usize,
+}
+
+impl ASTVisualizer {
+    fn new() -> Self {
+        Self { indent: 0 }
+    }
+}
+
+impl ASTVisitor for ASTVisualizer {
+    fn visit_expression(&mut self, exp: &ASTExpression) {
+        match &exp.kind {
+            ASTExpressionKind::IntegerLiteral(i) => {
+                println!("{}[Integer Literal]: {}", " ".repeat(self.indent), i);
+            }
+
+            ASTExpressionKind::Binary(exp) => {
+                println!(
+                    "{}Binary Operator: {}",
+                    " ".repeat(self.indent),
+                    exp.operator
+                );
+                self.indent += 4;
+                println!("{}Left operand: ", " ".repeat(self.indent));
+                self.indent += 4;
+                self.visit_expression(&exp.left);
+                println!("{}Right operand: ", " ".repeat(self.indent - 4));
+                self.visit_expression(&exp.right);
+
+                self.indent -= 8;
+            }
+        }
     }
 }

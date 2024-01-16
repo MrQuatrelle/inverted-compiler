@@ -1,3 +1,5 @@
+use std::i64;
+
 #[derive(Debug, PartialEq)]
 pub enum VarType {
     Int,
@@ -15,6 +17,10 @@ pub enum TokenKind {
     Integer(i64),
     Type(VarType),
     Return,
+    Plus,
+    Hyphen,
+    Asterisk,
+    Slash,
 }
 
 /// Implementations of `From` trait for `TokenKind`
@@ -36,7 +42,7 @@ impl From<i64> for TokenKind {
     }
 }
 
-fn tokenize_integer(slice: &str) -> Result<(TokenKind, usize), String> {
+fn tokenize_integer(slice: &str) -> Option<(TokenKind, usize)> {
     let mut offset = 0_usize;
 
     for c in slice.chars() {
@@ -48,24 +54,27 @@ fn tokenize_integer(slice: &str) -> Result<(TokenKind, usize), String> {
     }
 
     if offset == 0 {
-        Err(format!("Not an integer: '{}'", slice))
+        println!("Not an integer: '{}'", slice);
+        return None;
     } else {
         let buffer = &slice[..offset];
 
         if let Ok(i) = buffer.parse::<i64>() {
-            Ok((TokenKind::Integer(i), offset))
+            Some((TokenKind::Integer(i), offset))
         } else {
-            Err(format!("Not an integer: '{}'", slice))
+            println!("Not an integer: '{}'", slice);
+            return None;
         }
     }
 }
 
-fn tokenize_string(slice: &str) -> Result<(TokenKind, usize), String> {
+fn tokenize_string(slice: &str) -> Option<(TokenKind, usize)> {
     let mut offset = 0_usize;
 
     if let Some(c) = slice.chars().next() {
         if c.is_digit(10) {
-            return Err("unexpected digit in front of given slice".into());
+            println!("unexpected digit in front of given slice");
+            return None;
         }
     }
 
@@ -78,16 +87,14 @@ fn tokenize_string(slice: &str) -> Result<(TokenKind, usize), String> {
     }
 
     if offset == 0 {
-        Err("Not an identifier".into())
+        println!("Not an identifier");
+        None
     } else {
-        let buffer = &slice[..offset];
-        if buffer == "int" {
-            Ok((TokenKind::Type(VarType::Int), offset))
-        } else if buffer == "return" {
-            Ok((TokenKind::Return, offset))
-        } else {
-            Ok((TokenKind::Identifier(buffer.into()), offset))
-        }
+        Some(match &slice[..offset] {
+            "int" => (TokenKind::Type(VarType::Int), offset),
+            "return" => (TokenKind::Return, offset),
+            id => (TokenKind::Identifier(id.into()), offset),
+        })
     }
 }
 
@@ -114,17 +121,14 @@ impl<'a> Tokenizer<'a> {
         self.remaining_content = &self.remaining_content[offset..];
     }
 
-    fn next_token(&mut self) -> Result<Option<TokenKind>, String> {
+    fn next_token(&mut self) -> Option<TokenKind> {
         self._skip_whitespaces();
 
         if self.remaining_content.is_empty() {
-            return Ok(None);
+            return None;
         }
 
-        let next_char = match self.remaining_content.chars().next() {
-            Some(c) => c,
-            None => return Err("unexpected end of content".into()),
-        };
+        let next_char = self.remaining_content.chars().next()?;
 
         let (ret, offset) = match next_char {
             ';' => (TokenKind::SemiColon, 1),
@@ -134,48 +138,41 @@ impl<'a> Tokenizer<'a> {
             '}' => (TokenKind::RCurly, 1),
             '0'..='9' => tokenize_integer(self.remaining_content)?,
             'A'..='Z' | 'a'..='z' | '_' => tokenize_string(self.remaining_content)?,
+            '+' => (TokenKind::Plus, 1),
+            '-' => (TokenKind::Hyphen, 1),
+            '*' => (TokenKind::Asterisk, 1),
+            '/' => (TokenKind::Slash, 1),
             _ => {
-                return Err(format!(
-                    "Unsupported pattern at: {}",
-                    &self.remaining_content
-                ))
+                println!("Unsupported pattern at: {}", &self.remaining_content);
+                return None;
             }
         };
         self.remaining_content = &self.remaining_content[offset..];
-        Ok(Some(ret))
+        Some(ret)
     }
 }
 
-pub fn tokenize(content: String) -> Result<Vec<TokenKind>, String> {
+pub fn tokenize(content: String) -> Option<Vec<TokenKind>> {
     let mut tokenizer = Tokenizer::new(&content);
     let mut tokens: Vec<TokenKind> = Vec::new();
 
-    while let Some(t) = tokenizer.next_token()? {
+    while let Some(t) = tokenizer.next_token() {
         tokens.push(t)
     }
 
-    Ok(tokens)
+    Some(tokens)
 }
 
 #[test]
 fn tokenizer_test1() {
     let mut tokenizer = Tokenizer::new(";(){}1234");
-    assert_eq!(Some(TokenKind::SemiColon), tokenizer.next_token().unwrap());
-    assert_eq!(
-        Some(TokenKind::LParenthesis),
-        tokenizer.next_token().unwrap()
-    );
-    assert_eq!(
-        Some(TokenKind::RParenthesis),
-        tokenizer.next_token().unwrap()
-    );
-    assert_eq!(Some(TokenKind::LCurly), tokenizer.next_token().unwrap());
-    assert_eq!(Some(TokenKind::RCurly), tokenizer.next_token().unwrap());
-    assert_eq!(
-        Some(TokenKind::Integer(1234)),
-        tokenizer.next_token().unwrap()
-    );
-    assert_eq!(None, tokenizer.next_token().unwrap());
+    assert_eq!(Some(TokenKind::SemiColon), tokenizer.next_token());
+    assert_eq!(Some(TokenKind::LParenthesis), tokenizer.next_token());
+    assert_eq!(Some(TokenKind::RParenthesis), tokenizer.next_token());
+    assert_eq!(Some(TokenKind::LCurly), tokenizer.next_token());
+    assert_eq!(Some(TokenKind::RCurly), tokenizer.next_token());
+    assert_eq!(Some(TokenKind::Integer(1234)), tokenizer.next_token());
+    assert_eq!(None, tokenizer.next_token());
 }
 
 #[test]
