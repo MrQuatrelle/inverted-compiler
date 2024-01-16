@@ -13,6 +13,8 @@ pub enum TokenKind {
     RParenthesis,
     LCurly,
     RCurly,
+    LSquare,
+    RSquare,
     Identifier(String),
     Integer(i64),
     Type(VarType),
@@ -134,6 +136,8 @@ impl<'a> Tokenizer<'a> {
             ';' => (TokenKind::SemiColon, 1),
             '(' => (TokenKind::LParenthesis, 1),
             ')' => (TokenKind::RParenthesis, 1),
+            '[' => (TokenKind::LSquare, 1),
+            ']' => (TokenKind::RSquare, 1),
             '{' => (TokenKind::LCurly, 1),
             '}' => (TokenKind::RCurly, 1),
             '0'..='9' => tokenize_integer(self.remaining_content)?,
@@ -165,10 +169,12 @@ pub fn tokenize(content: String) -> Option<Vec<TokenKind>> {
 
 #[test]
 fn tokenizer_test1() {
-    let mut tokenizer = Tokenizer::new(";(){}1234");
+    let mut tokenizer = Tokenizer::new(";()[]{}1234");
     assert_eq!(Some(TokenKind::SemiColon), tokenizer.next_token());
     assert_eq!(Some(TokenKind::LParenthesis), tokenizer.next_token());
     assert_eq!(Some(TokenKind::RParenthesis), tokenizer.next_token());
+    assert_eq!(Some(TokenKind::LSquare), tokenizer.next_token());
+    assert_eq!(Some(TokenKind::RSquare), tokenizer.next_token());
     assert_eq!(Some(TokenKind::LCurly), tokenizer.next_token());
     assert_eq!(Some(TokenKind::RCurly), tokenizer.next_token());
     assert_eq!(Some(TokenKind::Integer(1234)), tokenizer.next_token());
