@@ -1,6 +1,22 @@
 pub mod ast;
 use regex::Regex;
-use std::io::Write;
+use std::{io::Write, process::exit};
+
+macro_rules! print_help {
+    () => {
+        print!(
+            r#"
+Inverted C compiler by MrQuatrelle
+
+    usage: icc [ARGS] <source files>
+
+    ARGS:
+            (TODO)
+            ...
+"#
+        );
+    };
+}
 
 fn compile(input: String) -> Result<String, String> {
     let ast = ast::parser::parse(input)?;
@@ -12,6 +28,11 @@ fn compile(input: String) -> Result<String, String> {
 fn main() -> Result<(), String> {
     let args: Vec<String> = std::env::args().collect();
     let content: String;
+
+    if args.len() < 2 {
+        print_help!();
+        exit(1);
+    }
 
     let mut destination_file: std::fs::File;
 
@@ -33,4 +54,3 @@ fn main() -> Result<(), String> {
 
     Ok(())
 }
-
