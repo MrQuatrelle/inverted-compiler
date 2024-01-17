@@ -1,8 +1,3 @@
-use core::panic;
-use std::i64;
-
-use self::tokenizer::TokenKind;
-
 pub mod parser;
 pub mod tokenizer;
 
@@ -49,34 +44,10 @@ pub(crate) struct ASTExpression {
     kind: ASTExpressionKind,
 }
 
-impl TryFrom<&tokenizer::TokenKind> for ASTExpression {
-    type Error = ();
-
-    fn try_from(token: &tokenizer::TokenKind) -> Result<Self, Self::Error> {
-        match token {
-            TokenKind::Integer(i) => Ok(Self {
-                kind: ASTExpressionKind::IntegerLiteral(*i),
-            }),
-            _ => Err(()),
-        }
-    }
-}
-
 impl From<i64> for ASTExpression {
     fn from(i: i64) -> Self {
         Self {
             kind: ASTExpressionKind::IntegerLiteral(i),
-        }
-    }
-}
-
-impl TryFrom<ASTNode> for ASTExpression {
-    type Error = ();
-
-    fn try_from(value: ASTNode) -> Result<Self, Self::Error> {
-        match value.kind {
-            ASTNodeKind::Expression(exp) => Ok(exp),
-            _ => Err(()),
         }
     }
 }
@@ -120,10 +91,6 @@ impl AST {
 
     fn push(&mut self, value: ASTNode) {
         self.nodes.push(value)
-    }
-
-    fn pop_last(&mut self) -> Option<ASTNode> {
-        self.nodes.pop()
     }
 
     pub fn visualize(&self) {
@@ -170,15 +137,17 @@ impl ASTVisitor for ASTVisualizer {
 
             ASTExpressionKind::Binary(exp) => {
                 println!(
-                    "{}Binary Operator: {}",
+                    "{}[Binary Operation]: {}",
                     " ".repeat(self.indent),
                     exp.operator
                 );
                 self.indent += 4;
-                println!("{}Left operand: ", " ".repeat(self.indent));
+                println!("{}[Left operand]: ", " ".repeat(self.indent));
+
                 self.indent += 4;
                 self.visit_expression(&exp.left);
-                println!("{}Right operand: ", " ".repeat(self.indent - 4));
+
+                println!("{}[Right operand]: ", " ".repeat(self.indent - 4));
                 self.visit_expression(&exp.right);
 
                 self.indent -= 8;

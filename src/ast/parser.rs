@@ -3,9 +3,10 @@ use super::{ASTBinaryExpression, ASTExpression, ASTExpressionKind, ASTNode, ASTN
 
 struct Parser {
     // NOTE: maybe this becomes a slice like the tokenizer
+    node_buffer: Option<ASTNode>,
     tokens: Vec<TokenKind>,
-    ast: AST,
     counter: usize,
+    ast: AST,
 }
 
 impl Parser {
@@ -18,9 +19,15 @@ impl Parser {
     }
 
     fn extract_args_binary(&mut self) -> Option<(ASTExpression, ASTExpression)> {
-        let left: ASTExpression = match self.ast.pop_last() {
-            Some(node) => node.try_into().expect("not an expression"),
+        let left: ASTExpression = match match self.node_buffer.take() {
+            Some(node) => node,
             None => panic!("parse error: no node to the left of binary operator"),
+        }
+        .kind
+        {
+            ASTNodeKind::Expression(exp) => exp,
+            #[allow(unreachable_patterns)]
+            _ => panic!("parse error: node to the left of binary operator isn't valid/supported"),
         };
 
         match left.kind {
@@ -38,11 +45,13 @@ impl Parser {
             None => panic!("parse error: no node to the right of binary operator"),
         };
 
-        let right: ASTExpression = match right.try_into() {
-            Ok(exp) => exp,
-            Err(_) => {
-                panic!("parse error: right side of the binary operator is not a valid expression")
-            }
+        let right: ASTExpression = match right {
+            TokenKind::Integer(i) => ASTExpression {
+                kind: ASTExpressionKind::IntegerLiteral(*i),
+            },
+
+            TokenKind::LParenthesis => todo!(),
+            _ => panic!(),
         };
 
         Some((left, right))
@@ -51,9 +60,14 @@ impl Parser {
     fn parse_binary(&mut self) -> Option<()> {
         let (left, right) = self.extract_args_binary()?;
 
-        self.ast.push(ASTNode::from(ASTExpression {
+        // no need to verify if we're overriding the attribute since extract_args_binary() applies
+        // .take() method on it
+        self.node_buffer = Some(ASTNode::from(ASTExpression {
             kind: ASTExpressionKind::Binary(ASTBinaryExpression::new(
-                match self.peek(-1).expect("I've been there before...") {
+                match self
+                    .peek(-1)
+                    .expect("[OOPS]: I've been there before so...?")
+                {
                     TokenKind::Plus => super::BinaryOperatorKind::Plus,
                     TokenKind::Hyphen => super::BinaryOperatorKind::Minus,
                     TokenKind::Asterisk => super::BinaryOperatorKind::Mult,
@@ -73,11 +87,22 @@ impl Parser {
             let token = self.current()?;
             match token {
                 TokenKind::Integer(i) => {
-                    self.ast.push(ASTNode::from(ASTExpression::from(*i)));
+                    if let Some(_) = self.node_buffer {
+                        panic!("expressions must be finished/separated by ';'");
+                    }
+
+                    self.node_buffer = Some(ASTNode::from(ASTExpression::from(*i)));
                 }
 
                 TokenKind::Plus | TokenKind::Hyphen | TokenKind::Asterisk | TokenKind::Slash => {
-                    self.parse_binary();
+                    self.parse_binary()?;
+                }
+
+                TokenKind::SemiColon => {
+                    if let Some(node) = self.node_buffer {
+                        self.ast.push(node);
+                        self.node_buffer = None;
+                    }
                 }
 
                 _ => panic!("[TODO]: token no supported by the parser"),
@@ -86,7 +111,13 @@ impl Parser {
             self.counter += 1;
         }
 
-        Some(self.ast)
+        // If there are still a node in the buffer, means the last expression wasn't fully read
+        // through or that it wasn't properly terminated (e.g. with a ';')
+        if let None = self.node_buffer {
+            Some(self.ast)
+        } else {
+            panic!("Parser buffer not empty yet... Last expr missing a ';'?");
+        }
     }
 }
 
@@ -96,6 +127,7 @@ impl From<Vec<TokenKind>> for Parser {
             tokens,
             counter: 0,
             ast: AST::new(),
+            node_buffer: None,
         }
     }
 }
@@ -107,6 +139,7 @@ impl From<String> for Parser {
                 tokens,
                 counter: 0,
                 ast: AST::new(),
+                node_buffer: None,
             },
             None => panic!("tokenizer failed while trying to create parser"),
         }
